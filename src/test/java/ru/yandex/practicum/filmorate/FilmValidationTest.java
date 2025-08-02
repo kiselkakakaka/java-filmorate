@@ -32,7 +32,7 @@ public class FilmValidationTest {
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertFalse(violations.isEmpty());
+        assertFalse(violations.isEmpty(), "Фильм с пустым именем должен не пройти валидацию");
     }
 
     @Test
@@ -44,7 +44,7 @@ public class FilmValidationTest {
         film.setReleaseDate(LocalDate.of(2020, 1, 1));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertFalse(violations.isEmpty());
+        assertFalse(violations.isEmpty(), "Фильм с отрицательной длительностью должен не пройти валидацию");
     }
 }
 
