@@ -1,16 +1,14 @@
 package ru.yandex.practicum.filmorate.model;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
 public class Film {
-
     private int id;
 
     @NotBlank(message = "Название фильма не может быть пустым")
@@ -24,5 +22,3 @@ public class Film {
     @Positive(message = "Продолжительность должна быть положительной")
     private int duration;
 }
-
-
