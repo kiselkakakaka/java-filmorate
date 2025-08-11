@@ -15,6 +15,3 @@ public interface FilmStorage {
 
     List<Film> getAll();
 }
-
-
-
