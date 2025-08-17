@@ -1,36 +1,34 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class InMemoryUserStorage implements UserStorage {
 
-    private final ConcurrentHashMap<Integer, User> users = new ConcurrentHashMap<>();
-    private final AtomicInteger idSeq = new AtomicInteger(0);
+    private final Map<Integer, User> users = new HashMap<>();
+    private int nextId = 1;
 
     @Override
     public User add(User user) {
-        int id = idSeq.incrementAndGet();
-        user.setId(id);
-        users.put(id, user);
+        user.setId(nextId++);
+        users.put(user.getId(), user);
         return user;
     }
 
     @Override
     public User update(User user) {
-        int id = user.getId();
-        if (!users.containsKey(id)) {
-            throw new NoSuchElementException("Пользователь с ID " + id + " не найден");
+        if (!users.containsKey(user.getId())) {
+            throw new NotFoundException("Пользователь с ID " + user.getId() + " не найден");
         }
-        users.put(id, user);
+        users.put(user.getId(), user);
         return user;
     }
 
@@ -42,5 +40,13 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public List<User> getAll() {
         return new ArrayList<>(users.values());
+    }
+
+    @Override
+    public void deleteById(int id) {
+        if (!users.containsKey(id)) {
+            throw new NotFoundException("Пользователь с ID " + id + " не найден");
+        }
+        users.remove(id);
     }
 }

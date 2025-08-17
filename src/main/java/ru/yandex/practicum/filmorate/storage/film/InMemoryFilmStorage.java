@@ -1,36 +1,34 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
 
-    private final ConcurrentHashMap<Integer, Film> films = new ConcurrentHashMap<>();
-    private final AtomicInteger idSeq = new AtomicInteger(0);
+    private final Map<Integer, Film> films = new HashMap<>();
+    private int nextId = 1;
 
     @Override
     public Film add(Film film) {
-        int id = idSeq.incrementAndGet();
-        film.setId(id);
-        films.put(id, film);
+        film.setId(nextId++);
+        films.put(film.getId(), film);
         return film;
     }
 
     @Override
     public Film update(Film film) {
-        int id = film.getId();
-        if (!films.containsKey(id)) {
-            throw new NoSuchElementException("Фильм с ID " + id + " не найден");
+        if (!films.containsKey(film.getId())) {
+            throw new NotFoundException("Фильм с ID " + film.getId() + " не найден");
         }
-        films.put(id, film);
+        films.put(film.getId(), film);
         return film;
     }
 
@@ -42,5 +40,13 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public List<Film> getAll() {
         return new ArrayList<>(films.values());
+    }
+
+    @Override
+    public void deleteById(int id) {
+        if (!films.containsKey(id)) {
+            throw new NotFoundException("Фильм с ID " + id + " не найден");
+        }
+        films.remove(id);
     }
 }

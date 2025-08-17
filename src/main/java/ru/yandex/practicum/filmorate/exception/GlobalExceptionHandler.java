@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,36 +16,36 @@ import java.util.NoSuchElementException;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
-        Map<String, String> body = new HashMap<>();
-        body.put("error", message);
-        return new ResponseEntity<>(body, status);
+    private Map<String, String> body(String message) {
+        Map<String, String> m = new HashMap<>();
+        m.put("error", message);
+        return m;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldError() != null
+    public ResponseEntity<Map<String, String>> onMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getFieldError() != null
                 ? ex.getBindingResult().getFieldError().getDefaultMessage()
                 : "Ошибка валидации";
-        log.warn(message);
-        return error(HttpStatus.BAD_REQUEST, message);
+        log.warn("Ошибка валидации: {}", msg);
+        return new ResponseEntity<>(body(msg), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<Map<String, String>> handleCustom(ValidationException ex) {
-        log.warn(ex.getMessage());
-        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+    @ExceptionHandler({ValidationException.class, ConstraintViolationException.class, IllegalArgumentException.class})
+    public ResponseEntity<Map<String, String>> onBadRequest(Exception ex) {
+        log.warn("Ошибка запроса: {}", ex.getMessage());
+        return new ResponseEntity<>(body(ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(NoSuchElementException ex) {
-        log.warn(ex.getMessage());
-        return error(HttpStatus.NOT_FOUND, ex.getMessage());
+    @ExceptionHandler({NotFoundException.class, NoSuchElementException.class})
+    public ResponseEntity<Map<String, String>> onNotFound(RuntimeException ex) {
+        log.warn("Не найдено: {}", ex.getMessage());
+        return new ResponseEntity<>(body(ex.getMessage()), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleOther(Exception ex) {
-        log.error(ex.getMessage(), ex);
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервера");
+    public ResponseEntity<Map<String, String>> onOther(Exception ex) {
+        log.error("Внутренняя ошибка: {}", ex.getMessage(), ex);
+        return new ResponseEntity<>(body("Внутренняя ошибка сервера"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
