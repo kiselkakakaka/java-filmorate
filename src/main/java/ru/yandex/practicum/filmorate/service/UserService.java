@@ -19,7 +19,6 @@ public class UserService {
         this.friendshipStorage = friendshipStorage;
     }
 
-    // --- методы, которые ждёт контроллер ---
     public User create(User user) {
         return add(user);               // делегируем на текущую add(...)
     }
@@ -44,12 +43,10 @@ public class UserService {
         userStorage.deleteById(id);
     }
 
-    // --- существующие методы домена (можно оставить для совместимости) ---
     public User add(User user) {
         return userStorage.add(user);
     }
 
-    // ---- дружба ----
     public void addFriend(int id, int friendId) {
         ensureExists(id);
         ensureExists(friendId);

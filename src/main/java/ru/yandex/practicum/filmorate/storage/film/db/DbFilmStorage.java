@@ -29,7 +29,6 @@ public class DbFilmStorage implements FilmStorage {
         String sql =
                 "INSERT INTO films (name, description, release_date, duration_min, mpa_id) " +
                         "VALUES (?, ?, ?, ?, (SELECT id FROM mpa_ratings WHERE code = 'PG-13'))";
-        // ↑ временно ставим PG-13, т.к. в твоей модели пока нет поля mpa.
         KeyHolder kh = new GeneratedKeyHolder();
         jdbc.update(conn -> {
             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);

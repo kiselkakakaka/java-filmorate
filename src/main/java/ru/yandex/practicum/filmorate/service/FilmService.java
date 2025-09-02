@@ -22,7 +22,6 @@ public class FilmService {
         this.filmLikeStorage = filmLikeStorage;
     }
 
-    // --- методы, которые ждёт контроллер ---
     public Film create(Film film) {
         validateReleaseDate(film.getReleaseDate());
         return filmStorage.add(film);   // делегируем на add(...)
@@ -47,7 +46,6 @@ public class FilmService {
         filmStorage.deleteById(id);
     }
 
-    // ---- лайки / популярные ----
     public void addLike(int filmId, int userId) {
         filmLikeStorage.addLike(filmId, userId);
     }
