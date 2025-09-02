@@ -20,7 +20,7 @@ public class UserService {
     }
 
     public User create(User user) {
-        return add(user);               // делегируем на текущую add(...)
+        return add(user);
     }
 
     public User update(User user) {
