@@ -1,9 +1,30 @@
 package ru.yandex.practicum.filmorate.model;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 public enum Genre {
-    COMEDY(1), DRAMA(2), CARTOON(3), THRILLER(4), DOCUMENTARY(5), ACTION(6);
+    COMEDY(1, "Комедия"),
+    DRAMA(2, "Драма"),
+    CARTOON(3, "Мультфильм"),
+    THRILLER(4, "Триллер"),
+    DOCUMENTARY(5, "Документальный"),
+    ACTION(6, "Боевик");
+
     private final int id;
-    Genre(int id) { this.id = id; }
+    private final String name;
+
+    Genre(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
     public int getId() { return id; }
+    public String getName() { return name; }
+
+    public static Optional<Genre> fromId(int id) {
+        return Arrays.stream(values()).filter(g -> g.id == id).findFirst();
+    }
 }
+
 
