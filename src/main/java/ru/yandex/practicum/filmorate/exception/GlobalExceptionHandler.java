@@ -54,6 +54,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body(ex.getMessage()), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
+    public ResponseEntity<Map<String, String>> onEmptyResult(org.springframework.dao.EmptyResultDataAccessException ex) {
+        log.warn("Не найдено (DB): {}", ex.getMessage());
+        return new ResponseEntity<>(body("Не найдено"), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> onOther(Exception ex) {
         log.error("Внутренняя ошибка: {}", ex.getMessage(), ex);

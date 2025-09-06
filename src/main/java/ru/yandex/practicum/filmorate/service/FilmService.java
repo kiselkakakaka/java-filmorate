@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.service;
 
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -23,9 +26,14 @@ public class FilmService {
     private final FilmLikeStorage filmLikeStorage;
     private final UserStorage userStorage;
 
+    private final MpaService mpaService;
+    private final GenreService genreService;
+
     @Transactional
     public Film create(Film film) {
         validateReleaseDate(film.getReleaseDate());
+        ensureMpaExists(film);
+        ensureGenresExist(film);
         return filmStorage.add(film);
     }
 
@@ -33,6 +41,8 @@ public class FilmService {
     public Film update(Film film) {
         ensureFilmExists(film.getId());
         validateReleaseDate(film.getReleaseDate());
+        ensureMpaExists(film);
+        ensureGenresExist(film);
         return filmStorage.update(film);
     }
 
@@ -89,5 +99,24 @@ public class FilmService {
         userStorage.getById(id).orElseThrow(
                 () -> new NotFoundException("Пользователь с ID " + id + " не найден")
         );
+    }
+
+    private void ensureMpaExists(Film film) {
+        if (film.getMpa() == null) {
+            throw new ValidationException("MPA-рейтинга быть не может null");
+        }
+        int mpaId = film.getMpa().getId();
+        mpaService.getById(mpaId);
+    }
+
+    private void ensureGenresExist(Film film) {
+        if (film.getGenres() == null || film.getGenres().isEmpty()) return;
+
+        LinkedHashSet<Genre> normalized = new LinkedHashSet<>();
+        for (Genre g : film.getGenres()) {
+            Genre found = genreService.getById(g.getId());
+            normalized.add(new Genre(found.getId(), found.getName()));
+        }
+        film.setGenres(normalized);
     }
 }
