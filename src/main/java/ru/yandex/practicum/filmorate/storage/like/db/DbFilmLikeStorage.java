@@ -21,7 +21,6 @@ public class DbFilmLikeStorage implements FilmLikeStorage {
 
     @Override
     public void addLike(int filmId, int userId) {
-        // не дублируем лайк
         final String sql = "MERGE INTO film_likes (film_id, user_id) KEY(film_id, user_id) VALUES (?, ?)";
         jdbc.update(sql, filmId, userId);
     }
@@ -33,7 +32,6 @@ public class DbFilmLikeStorage implements FilmLikeStorage {
 
     @Override
     public List<Film> findPopular(int count) {
-        // TOP N по количеству лайков, вместе с MPA
         final String sql = """
             SELECT f.id, f.name, f.description, f.release_date, f.duration_min,
                    m.id AS mpa_id, m.name AS mpa_name,
@@ -52,7 +50,6 @@ public class DbFilmLikeStorage implements FilmLikeStorage {
         List<Film> films = jdbc.query(sql, (rs, rn) -> mapFilm(rs), count);
         if (films.isEmpty()) return films;
 
-        // подгружаем жанры пачкой
         Map<Integer, LinkedHashSet<Genre>> byFilm = loadGenresForFilms(films);
         for (Film f : films) {
             f.setGenres(byFilm.getOrDefault(f.getId(), new LinkedHashSet<>()));

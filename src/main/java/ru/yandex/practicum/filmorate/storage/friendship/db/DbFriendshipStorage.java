@@ -19,7 +19,6 @@ public class DbFriendshipStorage implements FriendshipStorage {
 
     @Override
     public void addFriend(int userId, int friendId) {
-        // Идемпотентно: H2 поддерживает MERGE ... KEY(...)
         final String sql = """
             MERGE INTO friendships (user_id, friend_id, created_at)
             KEY (user_id, friend_id)

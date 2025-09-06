@@ -1,4 +1,3 @@
-// src/main/java/ru/yandex/practicum/filmorate/storage/common/MpaRowMapper.java
 package ru.yandex.practicum.filmorate.storage.common;
 
 import org.springframework.jdbc.core.RowMapper;

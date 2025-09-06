@@ -106,7 +106,6 @@ public class FilmDbStorage implements FilmStorage {
         jdbc.update("DELETE FROM films WHERE id=?", id);
     }
 
-    /** Собираем Film из текущей строки ResultSet */
     private Film mapRowToFilm(ResultSet rs) throws SQLException {
         Film f = new Film();
         f.setId(rs.getInt("id"));
