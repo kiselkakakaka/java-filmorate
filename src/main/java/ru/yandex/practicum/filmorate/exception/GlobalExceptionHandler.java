@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,10 +38,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body(ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> onConflict(DataIntegrityViolationException ex) {
+        log.warn("Нарушение ограничений БД: {}", ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage());
+        // обычно это дубликаты email/login или FK-конфликт
+        return new ResponseEntity<>(body("Нарушение ограничений БД (возможно, уже существует email/login)"),
+                HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler({NotFoundException.class, NoSuchElementException.class})
     public ResponseEntity<Map<String, String>> onNotFound(RuntimeException ex) {
         log.warn("Не найдено: {}", ex.getMessage());
         return new ResponseEntity<>(body(ex.getMessage()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
+    public ResponseEntity<Map<String, String>> onEmptyResult(org.springframework.dao.EmptyResultDataAccessException ex) {
+        log.warn("Не найдено (DB): {}", ex.getMessage());
+        return new ResponseEntity<>(body("Не найдено"), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
