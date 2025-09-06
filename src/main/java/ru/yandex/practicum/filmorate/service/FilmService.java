@@ -113,7 +113,7 @@ public class FilmService {
 
         LinkedHashSet<Genre> normalized = new LinkedHashSet<>();
         for (Genre g : film.getGenres()) {
-            Genre found = genreService.getById(g.getId());
+            Genre found = genreService.getById(g.getId()); // бросит 404 если не найден
             normalized.add(new Genre(found.getId(), found.getName()));
         }
         film.setGenres(normalized);
