@@ -1,5 +1,19 @@
 package ru.yandex.practicum.filmorate.storage.film.db;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -10,14 +24,6 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.LocalDate;
-import java.util.*;
-
-
 @Repository
 @Primary
 public class DbFilmStorage implements FilmStorage {
@@ -27,7 +33,6 @@ public class DbFilmStorage implements FilmStorage {
     public DbFilmStorage(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
-
 
     @Override
     public Film add(Film film) {
@@ -41,20 +46,15 @@ public class DbFilmStorage implements FilmStorage {
             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, film.getName());
             ps.setString(2, film.getDescription());
-            ps.setObject(3, film.getReleaseDate()); // LocalDate -> DATE
+            ps.setObject(3, film.getReleaseDate());
             ps.setInt(4, film.getDuration());
             ps.setInt(5, film.getMpa().getId());
             return ps;
         }, kh);
 
-        int filmId = kh.getKey() == null ? 0 : kh.getKey().intValue();
+        int filmId = Objects.requireNonNull(kh.getKey()).intValue();
 
-        // жанры
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            for (Genre g : film.getGenres()) {
-                jdbc.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", filmId, g.getId());
-            }
-        }
+        saveFilmGenresBatch(filmId, film.getGenres());
 
         return getById(filmId).orElseThrow();
     }
@@ -77,11 +77,7 @@ public class DbFilmStorage implements FilmStorage {
         );
 
         jdbc.update("DELETE FROM film_genres WHERE film_id = ?", film.getId());
-        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            for (Genre g : film.getGenres()) {
-                jdbc.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", film.getId(), g.getId());
-            }
-        }
+        saveFilmGenresBatch(film.getId(), film.getGenres());
 
         return getById(film.getId()).orElseThrow();
     }
@@ -99,8 +95,9 @@ public class DbFilmStorage implements FilmStorage {
         List<Film> list = jdbc.query(sql, (rs, rn) -> mapRowToFilm(rs), id);
         if (list.isEmpty()) return Optional.empty();
 
+        Map<Integer, LinkedHashSet<Genre>> byFilm = loadGenresForFilms(list);
         Film film = list.get(0);
-        film.setGenres(loadGenresForFilm(film.getId()));
+        film.setGenres(byFilm.getOrDefault(film.getId(), new LinkedHashSet<>()));
 
         return Optional.of(film);
     }
@@ -116,40 +113,63 @@ public class DbFilmStorage implements FilmStorage {
             """;
 
         List<Film> films = jdbc.query(sql, (rs, rn) -> mapRowToFilm(rs));
-
         if (films.isEmpty()) return films;
 
+        Map<Integer, LinkedHashSet<Genre>> byFilm = loadGenresForFilms(films);
+        for (Film f : films) {
+            f.setGenres(byFilm.getOrDefault(f.getId(), new LinkedHashSet<>()));
+        }
+        return films;
+    }
+
+    @Override
+    public void deleteById(int id) {
+        jdbc.update("DELETE FROM film_genres WHERE film_id = ?", id);
+        jdbc.update("DELETE FROM film_likes WHERE film_id = ?", id);
+        jdbc.update("DELETE FROM films WHERE id = ?", id);
+    }
+
+    private void saveFilmGenresBatch(int filmId, Set<Genre> genres) {
+        if (genres == null || genres.isEmpty()) return;
+
+        List<Integer> ids = genres.stream()
+                .map(Genre::getId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        jdbc.batchUpdate(
+                "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)",
+                ids,
+                200,
+                (ps, genreId) -> {
+                    ps.setInt(1, filmId);
+                    ps.setInt(2, genreId);
+                }
+        );
+    }
+
+    public Map<Integer, LinkedHashSet<Genre>> loadGenresForFilms(List<Film> films) {
+        if (films.isEmpty()) return Map.of();
+
+        String placeholders = films.stream().map(f -> "?").collect(Collectors.joining(","));
         final String gsql = """
             SELECT fg.film_id, g.id, g.name
               FROM film_genres fg
               JOIN genres g ON g.id = fg.genre_id
              WHERE fg.film_id IN (%s)
              ORDER BY fg.film_id, g.id
-            """;
+            """.formatted(placeholders);
 
-        String in = films.stream().map(f -> "?").reduce((a, b) -> a + "," + b).orElse("?");
-        String finalSql = gsql.formatted(in);
         Object[] ids = films.stream().map(Film::getId).toArray();
 
-        Map<Integer, LinkedHashSet<Genre>> byFilm = new HashMap<>();
-        jdbc.query(finalSql, rs -> {
+        Map<Integer, LinkedHashSet<Genre>> byFilm = new LinkedHashMap<>();
+        jdbc.query(gsql, rs -> {
             int filmId = rs.getInt("film_id");
             byFilm.computeIfAbsent(filmId, k -> new LinkedHashSet<>())
                     .add(new Genre(rs.getInt("id"), rs.getString("name")));
         }, ids);
-
-        for (Film f : films) {
-            f.setGenres(byFilm.getOrDefault(f.getId(), new LinkedHashSet<>()));
-        }
-
-        return films;
+        return byFilm;
     }
-
-    @Override
-    public void deleteById(int id) {
-        jdbc.update("DELETE FROM films WHERE id = ?", id);
-    }
-
 
     private Film mapRowToFilm(ResultSet rs) throws SQLException {
         Film f = new Film();
@@ -159,23 +179,7 @@ public class DbFilmStorage implements FilmStorage {
         LocalDate rd = rs.getObject("release_date", LocalDate.class);
         f.setReleaseDate(rd);
         f.setDuration(rs.getInt("duration_min"));
-        f.setMpa(new MpaRating(
-                rs.getInt("mpa_id"),
-                rs.getString("mpa_name")
-        ));
+        f.setMpa(new MpaRating(rs.getInt("mpa_id"), rs.getString("mpa_name")));
         return f;
-    }
-
-    private LinkedHashSet<Genre> loadGenresForFilm(int filmId) {
-        final String sql = """
-            SELECT g.id, g.name
-              FROM film_genres fg
-              JOIN genres g ON g.id = fg.genre_id
-             WHERE fg.film_id = ?
-             ORDER BY g.id
-            """;
-        return new LinkedHashSet<>(jdbc.query(sql,
-                (rs, rn) -> new Genre(rs.getInt("id"), rs.getString("name")),
-                filmId));
     }
 }

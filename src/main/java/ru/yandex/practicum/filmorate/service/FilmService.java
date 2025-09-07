@@ -102,18 +102,20 @@ public class FilmService {
 
     private void ensureMpaExists(Film film) {
         if (film.getMpa() == null) {
-            throw new ValidationException("MPA-рейтинга быть не может null");
+            throw new ValidationException("MPA-рейтинга не может быть null");
         }
         int mpaId = film.getMpa().getId();
         mpaService.getById(mpaId);
     }
 
     private void ensureGenresExist(Film film) {
-        if (film.getGenres() == null || film.getGenres().isEmpty()) return;
+        if (film.getGenres() == null || film.getGenres().isEmpty()) {
+            return;
+        }
 
         LinkedHashSet<Genre> normalized = new LinkedHashSet<>();
         for (Genre g : film.getGenres()) {
-            Genre found = genreService.getById(g.getId()); // бросит 404 если не найден
+            Genre found = genreService.getById(g.getId());
             normalized.add(new Genre(found.getId(), found.getName()));
         }
         film.setGenres(normalized);

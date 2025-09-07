@@ -24,4 +24,5 @@ public class MpaService {
         return storage.findById(id)
                 .orElseThrow(() -> new NotFoundException("MPA с ID " + id + " не найден"));
     }
+
 }
